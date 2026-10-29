@@ -15,6 +15,8 @@ if (src.includes('</scr' + 'ipt>')) throw new Error('产物含 </script>，禁�
 const lines = [];
 globalThis.Pikafish = undefined;
 globalThis.require = createRequire(import.meta.url);
+globalThis.__dirname = here;
+globalThis.__filename = fileURLToPath(import.meta.url);
 try {
   (0, eval)(src);
 } catch (err) {
