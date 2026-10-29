@@ -1,0 +1,33 @@
+name: build-pikafish-wasm
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: official-pikafish/Pikafish
+          ref: 6a59ee2f7b105bff64d9efc2692591107787e2b1
+          path: pikafish-src
+      - name: apply patch
+        run: git apply "$GITHUB_WORKSPACE/source.patch"
+        working-directory: pikafish-src
+      - name: setup emsdk
+        uses: emscripten-core/emsdk@v14
+        with:
+          version: 3.1.74
+          actions-cache-folder: emsdk-cache
+      - name: build
+        run: bash "$GITHUB_WORKSPACE/build.sh" "$GITHUB_WORKSPACE/dist/wasm"
+      - name: smoke test
+        run: node "$GITHUB_WORKSPACE/smoke.mjs" "$GITHUB_WORKSPACE/dist/wasm/pikafish.js" "$GITHUB_WORKSPACE/pikafish.nnue"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pikafish-js
+          path: dist/wasm/pikafish.js
+          retention-days: 90
