@@ -1,30 +1,25 @@
-// 冒烟：Node eval 产物 → 写 NNUE → 握手 → go depth 5 → 断言着法
+// 冒烟：Node require 产物 → 写 NNUE → 握手 → go depth 5 → 断言着法
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const jsPath = process.argv[2] || path.join(here, 'dist', 'wasm', 'pikafish.js');
 const nnuePath = process.argv[3] || path.join(here, 'pikafish.nnue');
+const require = createRequire(import.meta.url);
 
 const src = fs.readFileSync(jsPath, 'utf-8');
 if (src.includes('</scr' + 'ipt>')) throw new Error('产物含 </script>，禁止注入 HTML');
 
-// 产物是 var Pikafish = (()=>{...})(); 形态，eval 到全局
-const lines = [];
-globalThis.Pikafish = undefined;
-globalThis.require = createRequire(import.meta.url);
-globalThis.__dirname = here;
-globalThis.__filename = fileURLToPath(import.meta.url);
-try {
-  (0, eval)(src);
-} catch (err) {
-  console.error('EVAL ERROR:', err && err.stack || err);
-  throw err;
-}
+// 多线程 emscripten 产物在 Node 下必须经 require 真实文件加载（eval 会导致 pthread worker 重入主脚本、丢失 argv）
+const tmp = path.join(os.tmpdir(), 'pikafish-' + process.pid + '.cjs');
+fs.writeFileSync(tmp, src, 'utf-8');
+const Pikafish = require(tmp);
 if (typeof Pikafish !== 'function') throw new Error('Pikafish factory 缺失');
 
+const lines = [];
 const module = await Pikafish({
   print: l => lines.push(l),
   printErr: l => lines.push('ERR ' + l),
