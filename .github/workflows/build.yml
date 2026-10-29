@@ -27,6 +27,7 @@ jobs:
       - name: smoke test
         run: node "$GITHUB_WORKSPACE/smoke.mjs" "$GITHUB_WORKSPACE/dist/wasm/pikafish.js" "$GITHUB_WORKSPACE/pikafish.nnue"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: pikafish-js
           path: dist/wasm/pikafish.js

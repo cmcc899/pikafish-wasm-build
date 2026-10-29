@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const jsPath = process.argv[2] || path.join(here, 'dist', 'wasm', 'pikafish.js');
@@ -13,7 +14,13 @@ if (src.includes('</scr' + 'ipt>')) throw new Error('产物含 </script>，禁�
 // 产物是 var Pikafish = (()=>{...})(); 形态，eval 到全局
 const lines = [];
 globalThis.Pikafish = undefined;
-(0, eval)(src);
+globalThis.require = createRequire(import.meta.url);
+try {
+  (0, eval)(src);
+} catch (err) {
+  console.error('EVAL ERROR:', err && err.stack || err);
+  throw err;
+}
 if (typeof Pikafish !== 'function') throw new Error('Pikafish factory 缺失');
 
 const module = await Pikafish({
